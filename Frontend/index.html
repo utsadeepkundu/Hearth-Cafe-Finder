@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hearth — find somewhere worth going</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ivory: #FBF2EF;
+    --ivory-card: #FFFCFA;
+    --sand: #F3E9DD;
+    --rose: #E24E67;
+    --rose-deep: #C93A54;
+    --plum: #35182F;
+    --plum-soft: #5B3452;
+    --gold: #E2A23D;
+    --line: rgba(53,24,47,0.10);
+    --shadow: 0 18px 40px -22px rgba(53,24,47,0.35);
+    --radius-lg: 28px;
+    --radius-md: 18px;
+    --radius-sm: 12px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+
+  body{
+    margin:0;
+    background:var(--sand);
+    color:var(--plum);
+    font-family:'Public Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+  }
+
+  body.custom-cursor, body.custom-cursor a, body.custom-cursor button{
+    cursor:none;
+  }
+  .heart-cursor{
+    position:fixed;
+    top:0; left:0;
+    width:24px; height:24px;
+    pointer-events:none;
+    z-index:9999;
+    transform:translate3d(-50%,-50%,0);
+    opacity:0;
+  }
+  .heart-cursor.visible{ opacity:1; }
+  .heart-cursor-inner{
+    width:100%; height:100%;
+    transition:transform 0.12s cubic-bezier(.2,.8,.3,1);
+  }
+  .heart-cursor.pressed .heart-cursor-inner{ transform:scale(0.78); }
+  .heart-cursor svg{
+    width:100%; height:100%;
+    filter:drop-shadow(0 3px 6px rgba(53,24,47,0.35));
+  }
+
+  a, button{ font-family:inherit; }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    max-width:1180px;
+    margin:0 auto;
+    padding:32px 28px 8px;
+  }
+  .logo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Fraunces', serif;
+    font-size:22px;
+    font-weight:600;
+    letter-spacing:-0.01em;
+  }
+  .logo svg{ width:26px; height:26px; }
+  .header-note{
+    font-size:14px;
+    color:var(--plum-soft);
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    max-width:760px;
+    margin:0 auto;
+    padding:56px 28px 8px;
+    text-align:center;
+  }
+  .hero h1{
+    font-family:'Fraunces', serif;
+    font-optical-sizing:auto;
+    font-weight:600;
+    font-size:clamp(34px, 5.2vw, 56px);
+    line-height:1.08;
+    letter-spacing:-0.015em;
+    margin:0 0 18px;
+  }
+  .hero p{
+    font-size:17px;
+    line-height:1.6;
+    color:var(--plum-soft);
+    max-width:480px;
+    margin:0 auto 34px;
+  }
+
+  .locate-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    background:var(--plum);
+    color:var(--ivory);
+    border:none;
+    padding:15px 26px;
+    border-radius:100px;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    box-shadow:0 14px 30px -14px rgba(53,24,47,0.55);
+    transition:transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .locate-btn:hover{ transform:translateY(-2px); box-shadow:0 18px 34px -14px rgba(53,24,47,0.6); }
+  .locate-btn:active{ transform:translateY(0); }
+  .locate-btn svg{ width:17px; height:17px; flex-shrink:0; }
+
+  .locate-status{
+    margin-top:14px;
+    font-size:13.5px;
+    color:var(--plum-soft);
+    min-height:18px;
+  }
+  .locate-status.found{ color:var(--rose-deep); font-weight:600; }
+
+  /* ---------- Category dropdown ---------- */
+  .search-panel{
+    max-width:640px;
+    margin:38px auto 0;
+    padding:0 28px;
+  }
+  .search-panel.two-up{
+    display:flex;
+    gap:12px;
+  }
+  .search-panel.two-up .dropdown:first-child{ flex:1.4; }
+  .search-panel.two-up .dropdown:last-child{ flex:1; }
+  @media (max-width:560px){
+    .search-panel.two-up{ flex-direction:column; }
+  }
+  .dropdown{
+    position:relative;
+  }
+  .dropdown-trigger{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    background:var(--ivory-card);
+    border:1.5px solid var(--line);
+    border-radius:100px;
+    padding:16px 22px;
+    font-size:15.5px;
+    font-weight:600;
+    color:var(--plum);
+    cursor:pointer;
+    box-shadow:var(--shadow);
+  }
+  .dropdown-trigger .current{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .dropdown-trigger .chev{
+    width:14px; height:14px;
+    transition:transform 0.2s ease;
+    color:var(--plum-soft);
+  }
+  .dropdown.open .chev{ transform:rotate(180deg); }
+
+  .dropdown-panel{
+    position:absolute;
+    top:calc(100% + 10px);
+    left:0; right:0;
+    background:var(--ivory-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius-md);
+    box-shadow:var(--shadow);
+    padding:8px;
+    opacity:0;
+    transform:translateY(-6px) scale(0.98);
+    pointer-events:none;
+    transition:opacity 0.16s ease, transform 0.16s ease;
+    z-index:20;
+  }
+  .dropdown.open .dropdown-panel{
+    opacity:1;
+    transform:translateY(0) scale(1);
+    pointer-events:auto;
+  }
+  .dropdown-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+    background:none;
+    border:none;
+    text-align:left;
+    padding:12px 14px;
+    border-radius:var(--radius-sm);
+    font-size:15px;
+    font-weight:500;
+    color:var(--plum);
+    cursor:pointer;
+  }
+  .dropdown-item:hover{ background:rgba(226,78,103,0.08); }
+  .dropdown-item.active{ background:rgba(226,78,103,0.12); color:var(--rose-deep); font-weight:600; }
+  .dropdown-item .icon-badge{
+    width:32px; height:32px;
+    border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--ivory);
+    flex-shrink:0;
+  }
+  .dropdown-item .icon-badge svg{ width:16px; height:16px; }
+  .dropdown-item small{
+    display:block;
+    font-weight:400;
+    font-size:12.5px;
+    color:var(--plum-soft);
+    margin-top:1px;
+  }
+
+  /* ---------- Results ---------- */
+  .results-wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:52px 28px 100px;
+  }
+  .results-heading{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:26px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .results-heading h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:25px;
+    margin:0;
+  }
+  .results-count{
+    font-size:13.5px;
+    color:var(--plum-soft);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:20px;
+  }
+  .grid > .card:first-child{
+    grid-column:span 2;
+    grid-row:span 2;
+  }
+  @media (max-width:900px){
+    .grid{ grid-template-columns:repeat(2,1fr); }
+    .grid > .card:first-child{ grid-column:span 2; grid-row:span 1; }
+  }
+  @media (max-width:600px){
+    .grid{ grid-template-columns:1fr; }
+    .grid > .card:first-child{ grid-column:span 1; }
+  }
+
+  .card{
+    background:var(--ivory-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    opacity:0;
+    transform:translateY(14px);
+    animation:rise 0.55s ease forwards;
+  }
+  @keyframes rise{ to{ opacity:1; transform:translateY(0); } }
+
+  .card-media{
+    position:relative;
+    aspect-ratio:16/10;
+    overflow:hidden;
+    display:flex;
+    align-items:flex-end;
+    padding:16px;
+    background:linear-gradient(135deg,#f8ebe5,#ead7de);
+  }
+
+  .grid > .card:first-child .card-media{
+    aspect-ratio:16/9;
+    padding:22px;
+  }
+
+  .place-image{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    transition:transform .35s ease;
+  }
+
+  .card:hover .place-image{
+    transform:scale(1.04);
+  }
+
+  .image-fallback{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    background:
+      radial-gradient(circle at 25% 20%,rgba(226,78,103,.18),transparent 34%),
+      linear-gradient(135deg,#f8ebe5,#ead7de);
+    color:var(--plum);
+  }
+
+  .image-fallback .fallback-icon{
+    width:72px;
+    height:72px;
+    border-radius:22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(255,252,250,.78);
+    font-size:32px;
+    box-shadow:0 12px 30px rgba(53,24,47,.12);
+  }
+
+  .image-fallback span{
+    font-family:'Fraunces',serif;
+    font-size:18px;
+    font-weight:600;
+  }
+
+  .card-media > .tag,
+  .card-media > .rating,
+  .card-media > .photo-source{
+    position:relative;
+    z-index:3;
+  }
+
+  .photo-source{
+    position:absolute !important;
+    right:14px;
+    bottom:14px;
+    background:rgba(255,252,250,.92);
+    color:var(--plum);
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:600;
+    text-decoration:none;
+  }
+
+  .card-media .tag{
+    background:rgba(255,252,250,0.92);
+    color:var(--plum);
+    font-size:12.5px;
+    font-weight:600;
+    padding:6px 12px;
+    border-radius:100px;
+  }
+  .card-media .rating{
+    position:absolute;
+    top:16px; right:16px;
+    background:rgba(53,24,47,0.85);
+    color:var(--ivory);
+    font-size:12.5px;
+    font-weight:600;
+    padding:6px 10px 6px 8px;
+    border-radius:100px;
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
+  .card-media .rating svg{ width:12px; height:12px; }
+
+  .card-body{
+    padding:18px 20px 22px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    flex:1;
+  }
+  .card-body h3{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:18px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .grid > .card:first-child .card-body h3{ font-size:22px; }
+  .card-body p{
+    margin:0;
+    font-size:13.5px;
+    color:var(--plum-soft);
+    line-height:1.5;
+  }
+  .card-meta{
+    margin-top:auto;
+    padding-top:14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-size:12.5px;
+    color:var(--plum-soft);
+  }
+  .card-meta .distance{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .card-meta svg{ width:13px; height:13px; }
+  .card-meta .dot{ opacity:0.4; }
+
+  .directions-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:var(--plum);
+    color:var(--ivory);
+    border:none;
+    padding:8px 14px;
+    border-radius:100px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    text-decoration:none;
+    flex-shrink:0;
+    transition:transform 0.15s ease, background 0.15s ease;
+  }
+  .directions-btn:hover{ background:var(--rose-deep); transform:translateY(-1px); }
+  .directions-btn svg{ width:12px; height:12px; }
+
+  .no-results{
+    grid-column:1/-1;
+    text-align:center;
+    padding:60px 20px;
+    color:var(--plum-soft);
+    font-size:14.5px;
+  }
+
+  footer{
+    text-align:center;
+    padding:0 28px 48px;
+    font-size:13px;
+    color:var(--plum-soft);
+  }
+</style>
+</head>
+<body>
+
+<div class="heart-cursor" id="heartCursor">
+  <div class="heart-cursor-inner">
+    <svg viewBox="0 0 24 24" fill="#E24E67">
+      <path d="M12 21s-7.5-4.6-10-9.3C.4 8.1 2.3 4 6.2 4c2 0 3.6 1.1 4.8 2.7C12.2 5.1 13.8 4 15.8 4c3.9 0 5.8 4.1 4.2 7.7C19.5 16.4 12 21 12 21z"/>
+    </svg>
+  </div>
+</div>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 21s-7.5-4.6-10-9.3C.4 8.1 2.3 4 6.2 4c2 0 3.6 1.1 4.8 2.7C12.2 5.1 13.8 4 15.8 4c3.9 0 5.8 4.1 4.2 7.7C19.5 16.4 12 21 12 21z"/>
+    </svg>
+    Hearth
+  </div>
+  <div class="header-note">Find somewhere worth going, nearby</div>
+</header>
+
+<section class="hero">
+  <h1>Somewhere new is a few minutes away</h1>
+  <p>Turn on your location and pick a mood — Hearth finds cafés, game nights, culture, and quiet corners of history close to you.</p>
+  <button class="locate-btn" id="locateBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 2v3M12 19v3M22 12h-3M5 12H2"/>
+    </svg>
+    <span id="locateLabel">Use my location</span>
+  </button>
+  <div class="locate-status" id="locateStatus"></div>
+</section>
+
+<div class="search-panel two-up">
+  <div class="dropdown" id="dropdown">
+    <button class="dropdown-trigger" id="dropdownTrigger">
+      <span class="current">
+        <span id="currentIcon"></span>
+        <span id="currentLabel">Cafés</span>
+      </span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="dropdown-panel" id="dropdownPanel"></div>
+  </div>
+
+  <div class="dropdown" id="radiusDropdown">
+    <button class="dropdown-trigger" id="radiusTrigger">
+      <span class="current">
+        <span id="radiusIcon"></span>
+        <span id="radiusLabel">Within 5 km</span>
+      </span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="dropdown-panel" id="radiusPanel"></div>
+  </div>
+</div>
+
+<div class="results-wrap">
+  <div class="results-heading">
+    <h2 id="resultsTitle">Cafés near you</h2>
+    <span class="results-count" id="resultsCount">6 spots</span>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<footer>Hearth pulls place data from OpenStreetMap &amp; community sources — always double-check hours before you go.</footer>
+
+<script>
+  const icon = {
+    cafe: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
+    fun: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.4" fill="currentColor" stroke="none"/></svg>`,
+    ent: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="14" height="10" rx="2"/><path d="M17 8l4-2v10l-4-2"/></svg>`,
+    culture: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M4 21V9l8-6 8 6v12M9 21v-6h6v6"/></svg>`,
+    history: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>`
+  };
+  const star = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.7-5.4 4.7 1.7 7-6.3-3.8L5.7 21l1.7-7L2 9.3l7.1-.7z"/></svg>`;
+  const pin = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+
+  const categories = [
+    { id:'cafe', label:'Cafés', sub:'Coffee, quiet corners, laptop-friendly', icon:icon.cafe },
+    { id:'fun', label:'Fun & games', sub:'Bowling, arcades, mini golf', icon:icon.fun },
+    { id:'ent', label:'Entertainment', sub:'VR gaming, escape rooms, cinema', icon:icon.ent },
+    { id:'culture', label:'Culture', sub:'Museums, galleries, live shows', icon:icon.culture },
+    { id:'history', label:'Historic places', sub:'Landmarks, ruins, old quarters', icon:icon.history }
+  ];
+
+  const radii = [2, 5, 10, 20];
+
+  const grid = document.getElementById('grid');
+  const resultsTitle = document.getElementById('resultsTitle');
+  const resultsCount = document.getElementById('resultsCount');
+  const currentIcon = document.getElementById('currentIcon');
+  const currentLabel = document.getElementById('currentLabel');
+  const dropdown = document.getElementById('dropdown');
+  const dropdownTrigger = document.getElementById('dropdownTrigger');
+  const dropdownPanel = document.getElementById('dropdownPanel');
+
+  const radiusDropdown = document.getElementById('radiusDropdown');
+  const radiusTrigger = document.getElementById('radiusTrigger');
+  const radiusPanel = document.getElementById('radiusPanel');
+  const radiusLabel = document.getElementById('radiusLabel');
+
+  const directionsIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>`;
+
+ let state = {
+  catId: 'cafe',
+  radius: 5,
+  lat: null,
+  lon: null,
+  hasLocation: false
+};
+
+  function renderPanel(){
+    dropdownPanel.innerHTML = categories.map(c => `
+      <button class="dropdown-item" data-id="${c.id}">
+        <span class="icon-badge" style="color:var(--rose)">${c.icon}</span>
+        <span>${c.label}<small>${c.sub}</small></span>
+      </button>
+    `).join('');
+  }
+  function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+  function renderRadiusPanel(){
+    radiusPanel.innerHTML = radii.map(r => `
+      <button class="dropdown-item" data-km="${r}">
+        <span class="icon-badge" style="color:var(--rose)">${pin}</span>
+        <span>Within ${r} km<small>${r <= 5 ? 'Walkable to a short drive' : 'Worth driving for'}</small></span>
+      </button>
+    `).join('');
+  }
+
+async function renderResults() {
+  const cat = categories.find(c => c.id === state.catId);
+
+  if (!cat) return;
+
+  resultsTitle.textContent = `${cat.label} near you`;
+  currentIcon.innerHTML = cat.icon;
+  currentIcon.style.color = 'var(--rose)';
+  currentLabel.textContent = cat.label;
+  radiusLabel.textContent = `Within ${state.radius} km`;
+
+  document.querySelectorAll('#dropdownPanel .dropdown-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === state.catId);
+  });
+
+  document.querySelectorAll('#radiusPanel .dropdown-item').forEach(el => {
+    el.classList.toggle('active', Number(el.dataset.km) === state.radius);
+  });
+
+  if (!state.hasLocation) {
+    resultsCount.textContent = 'Location required';
+
+    grid.innerHTML = `
+      <div class="no-results">
+        <div style="font-size:32px; margin-bottom:12px;">📍</div>
+        <strong>Turn on your location</strong>
+        <div style="margin-top:6px;">
+          We'll find ${escapeHtml(cat.label.toLowerCase())} near you.
+        </div>
+      </div>
+    `;
+
+    return;
+  }
+
+  resultsCount.textContent = 'Finding places…';
+
+  grid.innerHTML = `
+    <div class="no-results">
+      Searching nearby ${escapeHtml(cat.label.toLowerCase())}…
+    </div>
+  `;
+
+  try {
+    const url =
+      `http://127.0.0.1:8000/api/places` +
+      `?lat=${encodeURIComponent(state.lat)}` +
+      `&lon=${encodeURIComponent(state.lon)}` +
+      `&category=${encodeURIComponent(state.catId)}` +
+      `&radius=${encodeURIComponent(state.radius)}`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    const places = Array.isArray(data.results) ? data.results : [];
+
+    resultsCount.textContent =
+      `${places.length} spot${places.length === 1 ? '' : 's'} within ${state.radius} km`;
+
+    if (places.length === 0) {
+      grid.innerHTML = `
+        <div class="no-results">
+          Nothing found within ${state.radius} km.
+          Try increasing the search radius.
+        </div>
+      `;
+      return;
+    }
+
+    const fallbackIcons = {
+      cafe: '☕',
+      fun: '🎳',
+      ent: '🎮',
+      culture: '🏛️',
+      history: '🏰'
+    };
+
+    grid.innerHTML = places.map((p, i) => {
+      const imageUrl = typeof p.image_url === 'string' ? p.image_url : '';
+      const imagePage = typeof p.image_page === 'string' ? p.image_page : '';
+      const subcategory = p.subcategory ? formatSubcategory(p.subcategory) : cat.label;
+
+      const addressHtml = p.address
+        ? `<p>📍 ${escapeHtml(p.address)}</p>`
+        : `<p>📍 Address unavailable</p>`;
+
+      const hoursHtml = p.opening_hours
+        ? `<p>🕐 ${escapeHtml(p.opening_hours)}</p>`
+        : `<p>🕐 Hours unavailable</p>`;
+
+      const phoneHtml = p.phone
+        ? `<p>☎ ${escapeHtml(p.phone)}</p>`
+        : '';
+
+      const websiteHtml = p.website
+        ? `<p><a href="${escapeHtml(p.website)}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;">🌐 Website</a></p>`
+        : '';
+
+      const photoHtml = imageUrl
+        ? `
+          <img
+            class="place-image"
+            src="${escapeHtml(imageUrl)}"
+            alt="${escapeHtml(p.name)}"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          >
+          <div class="image-fallback" style="display:none;">
+            <div class="fallback-icon">${fallbackIcons[state.catId] || '📍'}</div>
+            <span>${escapeHtml(subcategory)}</span>
+          </div>
+        `
+        : `
+          <div class="image-fallback">
+            <div class="fallback-icon">${fallbackIcons[state.catId] || '📍'}</div>
+            <span>${escapeHtml(subcategory)}</span>
+          </div>
+        `;
+
+      const bestMatch = i === 0
+        ? `<span class="rating">❤️ Best match</span>`
+        : '';
+
+      const sourceLink = imageUrl && imagePage
+        ? `<a class="photo-source" href="${escapeHtml(imagePage)}" target="_blank" rel="noopener noreferrer">Photo source</a>`
+        : '';
+
+      const mapsDestination = `${p.latitude},${p.longitude}`;
+
+      return `
+        <div
+          class="card"
+          style="animation-delay:${i * 70}ms; background:${cardTint(state.catId, i)}"
+        >
+          <div class="card-media">
+            ${photoHtml}
+
+            <span class="tag">
+              ${escapeHtml(subcategory)}
+            </span>
+
+            ${bestMatch}
+            ${sourceLink}
+          </div>
+
+          <div class="card-body">
+            <h3>${escapeHtml(p.name)}</h3>
+
+            <p class="place-type">${escapeHtml(cat.label)}</p>
+
+            ${addressHtml}
+            ${hoursHtml}
+            ${phoneHtml}
+            ${websiteHtml}
+
+            <div class="card-meta">
+              <span class="distance">
+                ${pin}
+                ${escapeHtml(p.distance_km)} km away
+              </span>
+
+              <a
+                class="directions-btn"
+                target="_blank"
+                rel="noopener noreferrer"
+                href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapsDestination)}"
+              >
+                ${directionsIcon}
+                Directions
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('Places API error:', error);
+
+    resultsCount.textContent = 'Search failed';
+
+    grid.innerHTML = `
+      <div class="no-results">
+        <strong>Couldn't find places right now.</strong>
+        <div style="margin-top:6px;">
+          Please make sure the Hearth backend is running.
+        </div>
+      </div>
+    `;
+  }
+}
+
+function formatSubcategory(value) {
+  const labels = {
+    cafe: 'Café',
+    bowling: 'Bowling',
+    arcade: 'Arcade',
+    vr_arcade: 'VR Arcade',
+    mini_golf: 'Mini Golf',
+    escape_room: 'Escape Room',
+    cinema: 'Cinema',
+    theatre: 'Theatre',
+    theme_park: 'Theme Park',
+    museum: 'Museum',
+    gallery: 'Gallery',
+    arts_centre: 'Arts Centre',
+    library: 'Library',
+    historic: 'Historic Place'
+  };
+
+  return labels[value] || String(value).replace(/_/g, ' ');
+}
+
+  function cardTint(catId, i){
+    const tints = {
+      cafe:    ['#FFF7F3','#FFFCFA'],
+      fun:     ['#FFF3F0','#FFFCFA'],
+      ent:     ['#FBF1F7','#FFFCFA'],
+      culture: ['#FDF6EE','#FFFCFA'],
+      history: ['#F7F3EE','#FFFCFA']
+    };
+    const pair = tints[catId] || ['#FFFCFA','#FFFCFA'];
+    return i === 0 ? pair[0] : pair[1];
+  }
+
+  renderPanel();
+  renderRadiusPanel();
+  renderResults();
+
+  dropdownTrigger.addEventListener('click', () => {
+    dropdown.classList.toggle('open');
+    radiusDropdown.classList.remove('open');
+  });
+  radiusTrigger.addEventListener('click', () => {
+    radiusDropdown.classList.toggle('open');
+    dropdown.classList.remove('open');
+  });
+  document.addEventListener('click', (e) => {
+    if(!dropdown.contains(e.target)) dropdown.classList.remove('open');
+    if(!radiusDropdown.contains(e.target)) radiusDropdown.classList.remove('open');
+  });
+  dropdownPanel.addEventListener('click', async (e) => {
+
+  const btn = e.target.closest('.dropdown-item');
+
+  if (!btn) return;
+
+  dropdown.classList.remove('open');
+
+  state.catId = btn.dataset.id;
+
+  await renderResults();
+});
+radiusPanel.addEventListener('click', async (e) => {
+
+  const btn = e.target.closest('.dropdown-item');
+
+  if (!btn) return;
+
+  radiusDropdown.classList.remove('open');
+
+  state.radius = Number(btn.dataset.km);
+
+  await renderResults();
+});
+
+  const locateBtn = document.getElementById('locateBtn');
+  const locateLabel = document.getElementById('locateLabel');
+  const locateStatus = document.getElementById('locateStatus');
+  locateBtn.addEventListener('click', () => {
+
+  if (!navigator.geolocation) {
+
+    locateStatus.textContent =
+      "Location isn't available in this browser.";
+
+    return;
+  }
+
+  locateLabel.textContent = 'Locating…';
+  locateStatus.textContent = '';
+  locateStatus.classList.remove('found');
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+
+      state.lat = pos.coords.latitude;
+      state.lon = pos.coords.longitude;
+      state.hasLocation = true;
+
+      locateLabel.textContent = 'Location on';
+
+      locateStatus.textContent =
+        `Searching near ${state.lat.toFixed(2)}, ${state.lon.toFixed(2)}`;
+
+      locateStatus.classList.add('found');
+
+      // Fetch real places
+      await renderResults();
+    },
+
+    (error) => {
+
+      console.error('Geolocation error:', error);
+
+      locateLabel.textContent = 'Use my location';
+
+      state.hasLocation = false;
+      state.lat = null;
+      state.lon = null;
+
+      if (error.code === error.PERMISSION_DENIED) {
+
+        locateStatus.textContent =
+          'Location permission was denied.';
+
+      } else if (error.code === error.TIMEOUT) {
+
+        locateStatus.textContent =
+          'Location request timed out.';
+
+      } else {
+
+        locateStatus.textContent =
+          'Unable to determine your location.';
+      }
+    },
+
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 300000
+    }
+  );
+});
+
+  // Custom heart cursor — only for mouse/trackpad users, real touch devices keep native behavior
+  if (window.matchMedia('(pointer: fine)').matches) {
+    document.body.classList.add('custom-cursor');
+    const heartCursor = document.getElementById('heartCursor');
+
+    window.addEventListener('mousemove', (e) => {
+      heartCursor.classList.add('visible');
+      heartCursor.style.transform = `translate3d(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%), 0)`;
+    });
+    window.addEventListener('mousedown', () => heartCursor.classList.add('pressed'));
+    window.addEventListener('mouseup', () => heartCursor.classList.remove('pressed'));
+    document.addEventListener('mouseleave', () => heartCursor.classList.remove('visible'));
+  }
+</script>
+
+</body>
+</html>
