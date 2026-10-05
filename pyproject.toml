@@ -1,2 +1,13 @@
+[project]
+name = "hearth-cafe-finder"
+version = "1.0.0"
+description = "FastAPI-based cafe and nearby-place finder"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.4",
+    "httpx==0.28.1"
+]
+
 [tool.vercel]
 entrypoint = "Backend.main:app"
